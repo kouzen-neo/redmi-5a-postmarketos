@@ -49,6 +49,7 @@ Source repository, build automation recipes, and technical documentation for por
 │   ├── build-recovery-zip.sh # Script to build TWRP flashable installer ZIP
 │   ├── flash-twrp.sh       # Automation script to push and flash via recovery
 │   ├── setup-storage.sh    # Automated script to format & mount 10GB userdata partition
+│   ├── wifi-powersave-fix.sh # Script to disable Wi-Fi power save and fix DNS
 │   └── screen-control.sh   # Utility script to control LCD backlight via sysfs
 └── docs/
     ├── BOOT_FLOW.md        # Technical explanation of Qualcomm boot sequence
@@ -88,7 +89,7 @@ python3 -m venv ~/.local/share/pmbootstrap-venv
 ~/.local/share/pmbootstrap-venv/bin/pmbootstrap config device qcom-msm89x7
 ~/.local/share/pmbootstrap-venv/bin/pmbootstrap config ui console
 ~/.local/share/pmbootstrap-venv/bin/pmbootstrap config user user
-~/.local/share/pmbootstrap-venv/bin/pmbootstrap config extra_packages "openssh,htop,nano,tmux,neofetch,curl,git"
+~/.local/share/pmbootstrap-venv/bin/pmbootstrap config extra_packages "openssh,htop,nano,tmux,curl,git,fish,iw,ethtool"
 ```
 
 ### 3. Build Recovery Installer ZIP
@@ -109,12 +110,15 @@ Generate the TWRP-compatible installation package:
    adb reboot
    ```
 
-### 5. Initialize the 10 GB Storage Partition
-After booting into postmarketOS, run the storage setup script once on the device:
-```bash
-sudo ./scripts/setup-storage.sh
-```
-This formats `/dev/block/bootdevice/by-name/userdata` as `ext4`, mounts it permanently at `/data`, and links it to `~/data`.
+### 5. Post-Boot Configuration
+1. Initialize the 10 GB internal storage partition:
+   ```bash
+   sudo ./scripts/setup-storage.sh
+   ```
+2. Disable Wi-Fi power saving and fix DNS resolvers:
+   ```bash
+   sudo ./scripts/wifi-powersave-fix.sh
+   ```
 
 ---
 

@@ -1,6 +1,6 @@
 # Troubleshooting & Debugging Guide
 
-This document records technical issues encountered during the Mainline Linux porting and deployment process on the Qualcomm Snapdragon 425 platform and their concrete solutions.
+This document records technical issues encountered during the Mainline Linux porting, networking, and service deployment process on the Qualcomm Snapdragon 425 platform and their concrete solutions.
 
 ---
 
@@ -60,7 +60,47 @@ Cannot open access to console, the root account is locked.
 
 ---
 
-## 3. Host Kernel Module `loop` Mismatch (Arch / CachyOS)
+## 3. High Wi-Fi Latency Spikes (300ms - 700ms Ping Time)
+
+### Symptom:
+Ping latency over Wi-Fi fluctuates heavily between 200ms and 800ms, and web assets or SSH connections occasionally hang.
+
+### Root Cause:
+The Qualcomm WCN36xx Wi-Fi driver enables 802.11 Power Save (PS-Poll sleep) by default in NetworkManager, putting the wireless chip into sleep between beacon intervals.
+
+### Solution:
+Permanently disable Wi-Fi power saving in NetworkManager:
+```bash
+sudo ./scripts/wifi-powersave-fix.sh
+```
+Or manually configure `/etc/NetworkManager/conf.d/disable-wifi-powersave.conf`:
+```ini
+[connection]
+wifi.powersave = 2
+```
+And execute `iw dev wlan0 set power_save off`.
+
+---
+
+## 4. DNS Resolution Timeout on `systemd-resolved`
+
+### Symptom:
+`nslookup` or `curl` to internet domain names times out even though direct IP pings (e.g. `ping 1.1.1.1`) succeed with 0% packet loss.
+
+### Root Cause:
+`/etc/resolv.conf` pointing to `127.0.0.53` (local stub) fails if `systemd-resolved` loses its uplink DNS server configuration.
+
+### Solution:
+Replace `/etc/resolv.conf` with direct static gateway and global resolvers:
+```text
+nameserver 192.168.100.1
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+```
+
+---
+
+## 5. Host Kernel Module `loop` Mismatch (Arch / CachyOS)
 
 ### Symptom:
 ```text
