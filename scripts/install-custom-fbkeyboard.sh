@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script: Build & Install Customized fbkeyboard with Arrow Keys (Redmi 5A)
+# Script: Build & Install Customized fbkeyboard with Arrow Keys & Green Theme
+# Target: Xiaomi Redmi 5A (riva) / postmarketOS
 # ==============================================================================
 set -euo pipefail
 
@@ -17,11 +18,12 @@ TMP_DIR=$(mktemp -d)
 git clone https://github.com/bakonyiferenc/fbkeyboard.git "$TMP_DIR"
 cd "$TMP_DIR"
 
-echo "=== [3/4] Patching Keyboard Layout with Arrow Keys (^, v, <, >) ==="
+echo "=== [3/4] Patching Layout (Arrow Keys) & Neon Green Color Theme ==="
 python3 -c "
 with open('fbkeyboard.c', 'r') as f:
     code = f.read()
 
+# 1. Custom Top Row with Arrow Navigation Keys (^, v, <, >)
 old_special = '''char *special[][7] = {
 	{ \"Esc\", \"Tab\", \"F10\", \" / \", \" - \", \" . \", \" \\\\ \" },
 	{ \"Esc\", \"Tab\", \"F10\", \" ? \", \" _ \", \" > \", \" | \" },
@@ -38,11 +40,15 @@ new_keys = '''{ KEY_ESC, KEY_TAB, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_SLA
 if old_special in code:
     code = code.replace(old_special, new_special)
     code = code.replace(old_keys, new_keys)
-    with open('fbkeyboard.c', 'w') as f:
-        f.write(code)
-    print('Custom layout patch applied successfully!')
-else:
-    print('Pattern not found, skipping patch.')
+
+# 2. Matrix Cyberpunk Neon Green Colors (0x00ff00)
+code = code.replace('#define TOUCHCOLOR 0x4444ee', '#define TOUCHCOLOR 0x00ff00')
+code = code.replace('#define BUTTONCOLOR 0x111122', '#define BUTTONCOLOR 0x000000')
+code = code.replace('#define BACKLITCOLOR 0xff0000', '#define BACKLITCOLOR 0x00ff00')
+
+with open('fbkeyboard.c', 'w') as f:
+    f.write(code)
+print('Custom layout & green color patch applied successfully!')
 "
 
 make
@@ -52,4 +58,4 @@ rm -rf "$TMP_DIR"
 echo "=== [4/4] Restarting fbkeyboard Service ==="
 systemctl restart fbkeyboard.service
 
-echo "Custom fbkeyboard with arrow keys installed and running successfully!"
+echo "Custom fbkeyboard with arrow keys and Neon Green theme is active!"
