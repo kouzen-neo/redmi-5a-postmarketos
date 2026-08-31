@@ -1,6 +1,6 @@
 # Troubleshooting & Debugging Guide
 
-This document records technical issues encountered during the Mainline Linux porting process on the Qualcomm Snapdragon 425 platform and their solutions.
+This document records technical issues encountered during the Mainline Linux porting and deployment process on the Qualcomm Snapdragon 425 platform and their concrete solutions.
 
 ---
 
@@ -26,7 +26,41 @@ The recovery installer executes partition formatting and rootfs extraction local
 
 ---
 
-## 2. Host Kernel Module `loop` Mismatch (Arch / CachyOS)
+## 2. Emergency Mode on Boot ("Cannot open access to console, the root account is locked")
+
+### Symptom:
+After making manual partition changes or `extlinux.conf` modifications, the system boots into a text screen saying:
+```text
+You are in emergency mode. After logging in, type "journalctl -xb" to view system logs...
+Cannot open access to console, the root account is locked.
+```
+
+### Root Cause:
+`systemd` enters emergency mode if any entry in `/etc/fstab` fails to mount (e.g. invalid UUID, missing device, or fsck error). In default postmarketOS, the `root` account has no password set (only the default user has `sudo` access), preventing manual login in emergency console mode.
+
+### Solution:
+1. Reboot the phone into Recovery Mode (hold `Power + Volume Up` for ~8-10s).
+2. Connect USB to PC and inspect `/boot/extlinux/extlinux.conf` and `/etc/fstab` via `adb shell`:
+   ```bash
+   adb shell
+   # Mount boot and rootfs partitions
+   losetup -o 1048576 /dev/block/loop0 /dev/block/mmcblk0p24
+   losetup -o 255852544 /dev/block/loop1 /dev/block/mmcblk0p24
+   mkdir -p /mnt/boot /mnt/root
+   mount /dev/block/loop0 /mnt/boot
+   mount /dev/block/loop1 /mnt/root
+   ```
+3. Ensure `pmos_root_uuid` in `/mnt/boot/extlinux/extlinux.conf` exactly matches the UUID of `pmOS_root` (`7c50ec00-f65c-4c4b-82c6-a0c13f0c8612`).
+4. Ensure `/mnt/root/etc/fstab` only contains valid, existing partition UUIDs.
+5. Unmount and reboot:
+   ```bash
+   umount /mnt/boot /mnt/root
+   adb reboot
+   ```
+
+---
+
+## 3. Host Kernel Module `loop` Mismatch (Arch / CachyOS)
 
 ### Symptom:
 ```text
@@ -49,21 +83,3 @@ for i in {0..7}; do
     [ ! -b /dev/loop$i ] && sudo mknod -m 0660 /dev/loop$i b 7 $i && sudo chown root:disk /dev/loop$i
 done
 ```
-
----
-
-## 3. Partition UUID Alignment in `extlinux.conf`
-
-### Symptom:
-The kernel boots, but the initramfs fails to mount the root filesystem with the message:
-```text
-Waiting for root device UUID=...
-```
-
-### Solution:
-1. Boot into recovery mode.
-2. Query the actual partition UUIDs:
-   ```bash
-   adb shell blkid | grep pmOS
-   ```
-3. Update `pmos_boot_uuid` and `pmos_root_uuid` in `/boot/extlinux/extlinux.conf` and `/etc/fstab` on the target root filesystem.

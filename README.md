@@ -6,7 +6,7 @@
 [![SoC](https://img.shields.io/badge/SoC-Qualcomm%20Snapdragon%20425-red.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Source repository and documentation for porting and deploying **Mainline Linux Kernel (7.1.x)** and **postmarketOS (Alpine Linux edge)** on the **Xiaomi Redmi 5A (`riva` / Qualcomm Snapdragon 425 MSM8917)**.
+Source repository, build automation recipes, and technical documentation for porting and deploying **Mainline Linux Kernel (7.1.x)** and **postmarketOS (Alpine Linux edge)** on the **Xiaomi Redmi 5A (`riva` / Qualcomm Snapdragon 425 MSM8917)**.
 
 ---
 
@@ -19,10 +19,10 @@ Source repository and documentation for porting and deploying **Mainline Linux K
 | **CPU Architecture** | Quad-Core ARM Cortex-A53 @ 1.401 GHz (ARMv8-A 64-bit) |
 | **GPU** | Qualcomm Adreno 308 (Open-source `freedreno` / Mesa) |
 | **RAM** | 2 GB LPDDR3 (~300 MB used at idle, **1.2+ GB free**) |
-| **Storage** | 16 GB eMMC 5.1 |
+| **Storage** | 16 GB eMMC 5.1 (3 GB System rootfs + **10 GB Userdata mounted at `/data`**) |
 | **Display** | 5.0" IPS LCD (720x1280, 60 Hz) |
 | **Wireless** | Qualcomm WCN36xx (802.11 b/g/n, Bluetooth 4.1) |
-| **Power / Battery** | 3000 mAh Li-Ion (Integrated battery backup) |
+| **Power / Battery** | 3000 mAh Li-Ion (Integrated battery backup / UPS) |
 
 ---
 
@@ -48,9 +48,11 @@ Source repository and documentation for porting and deploying **Mainline Linux K
 │   ├── build-kernel.sh     # Script to compile kernel and device packages
 │   ├── build-recovery-zip.sh # Script to build TWRP flashable installer ZIP
 │   ├── flash-twrp.sh       # Automation script to push and flash via recovery
+│   ├── setup-storage.sh    # Automated script to format & mount 10GB userdata partition
 │   └── screen-control.sh   # Utility script to control LCD backlight via sysfs
 └── docs/
     ├── BOOT_FLOW.md        # Technical explanation of Qualcomm boot sequence
+    ├── STORAGE_PARTITIONING.md # eMMC partition mapping and layout guide
     ├── KERNEL_CONFIG.md    # Kernel configuration and enabled hardware drivers
     └── TROUBLESHOOTING.md  # Detailed troubleshooting solutions
 ```
@@ -107,6 +109,13 @@ Generate the TWRP-compatible installation package:
    adb reboot
    ```
 
+### 5. Initialize the 10 GB Storage Partition
+After booting into postmarketOS, run the storage setup script once on the device:
+```bash
+sudo ./scripts/setup-storage.sh
+```
+This formats `/dev/block/bootdevice/by-name/userdata` as `ext4`, mounts it permanently at `/data`, and links it to `~/data`.
+
 ---
 
 ## Post-Installation Management
@@ -141,8 +150,9 @@ sudo ./scripts/screen-control.sh on
 ---
 
 ## Technical Documentation
-* [Boot Sequence & Partition Layout](docs/BOOT_FLOW.md)
-* [Kernel Configuration Details](docs/KERNEL_CONFIG.md)
+* [Boot Sequence & Hardware Init](docs/BOOT_FLOW.md)
+* [eMMC Storage Architecture & Partition Layout](docs/STORAGE_PARTITIONING.md)
+* [Kernel Configuration & Drivers](docs/KERNEL_CONFIG.md)
 * [Troubleshooting & Bug Fixes](docs/TROUBLESHOOTING.md)
 
 ---
