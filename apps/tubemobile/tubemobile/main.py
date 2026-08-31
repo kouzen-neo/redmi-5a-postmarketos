@@ -12,28 +12,23 @@ if BASE_DIR not in sys.path:
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, Gio, GLib
-from tubemobile.ui.window import TubeMobileWindow
 
 class TubeMobileApp(Adw.Application):
     def __init__(self):
         super().__init__(
             application_id="com.github.kouzen.tubemobile",
-            flags=Gio.ApplicationFlags.DEFAULT_FLAGS
+            flags=Gio.ApplicationFlags.FLAGS_NONE
         )
 
     def do_activate(self):
         win = self.props.active_window
         if not win:
+            from tubemobile.ui.window import TubeMobileWindow
             win = TubeMobileWindow(self)
         win.present()
 
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    
-    # Initialize GTK4 & Libadwaita display connection
-    Gtk.init()
-    Adw.init()
-    
     app = TubeMobileApp()
     return app.run(sys.argv)
 

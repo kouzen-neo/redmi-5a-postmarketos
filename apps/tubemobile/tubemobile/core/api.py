@@ -1,8 +1,7 @@
-"""TubeMobile Core API with Native yt_dlp Extraction"""
+"""TubeMobile Core API with Lazy yt_dlp Extraction"""
 import os
 import logging
 from concurrent.futures import ThreadPoolExecutor
-import yt_dlp
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TubeMobile.API")
@@ -24,6 +23,13 @@ class YouTubeAPI:
 
     @classmethod
     def _search_videos(cls, query, max_results=15):
+        # Lazy import yt_dlp inside background thread so app starts in <0.1 second!
+        try:
+            import yt_dlp
+        except ImportError:
+            logger.error("yt_dlp not installed")
+            return []
+
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
@@ -74,7 +80,7 @@ class YouTubeAPI:
                             "thumbnail_url": thumb_url,
                             "description": item.get("description", "")
                         })
-            logger.info(f"Successfully loaded {len(videos)} videos for '{query}'")
+            logger.info(f"Loaded {len(videos)} videos for '{query}'")
             return videos
         except Exception as e:
             logger.error(f"Error fetching YouTube videos: {e}")

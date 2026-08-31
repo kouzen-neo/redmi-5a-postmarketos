@@ -22,6 +22,17 @@ echo "276543" | sudo -S bash -c "
 mkdir -p /usr/local/share/tubemobile
 rm -rf /usr/local/share/tubemobile/*
 cp -r /tmp/tubemobile/tubemobile /usr/local/share/tubemobile/
+chmod -R 755 /usr/local/share/tubemobile
+
+# Install Launcher Wrapper
+cat << \"EOF\" > /usr/local/bin/tubemobile
+#!/bin/sh
+export XDG_RUNTIME_DIR=\"/run/user/\$(id -u)\"
+export WAYLAND_DISPLAY=\"\${WAYLAND_DISPLAY:-wayland-0}\"
+export PYTHONPATH=\"/usr/local/share/tubemobile:\${PYTHONPATH:-}\"
+exec /usr/bin/python3 /usr/local/share/tubemobile/tubemobile/main.py \"\$@\"
+EOF
+chmod +x /usr/local/bin/tubemobile
 
 # Install Icon
 mkdir -p /usr/share/icons/hicolor/scalable/apps

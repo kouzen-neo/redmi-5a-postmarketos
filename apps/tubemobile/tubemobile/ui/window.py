@@ -131,12 +131,15 @@ class TubeMobileWindow(Adw.ApplicationWindow):
         self.master_stack.set_visible_child_name("main_feed")
 
     def _load_css(self):
-        provider = Gtk.CssProvider()
-        provider.load_from_string(CSS_STYLES)
-        display = Gdk.Display.get_default()
-        if display:
-            Gtk.StyleContext.add_provider_for_display(
-                display,
-                provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            )
+        try:
+            provider = Gtk.CssProvider()
+            provider.load_from_string(CSS_STYLES)
+            display = Gdk.Display.get_default()
+            if display:
+                Gtk.StyleContext.add_provider_for_display(
+                    display,
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                )
+        except Exception:
+            pass

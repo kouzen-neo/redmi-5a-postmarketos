@@ -2,7 +2,7 @@
 Name=TubeMobile
 GenericName=YouTube Mobile Client
 Comment=Pemutar YouTube Native Ringan untuk postmarketOS
-Exec=python3 /usr/local/share/tubemobile/tubemobile/main.py
+Exec=/usr/local/bin/tubemobile
 Icon=tubemobile
 Terminal=false
 Type=Application
