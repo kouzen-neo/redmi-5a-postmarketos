@@ -1,0 +1,11 @@
+[terminal]
+vt = 7
+
+[default_session]
+command = "/usr/libexec/phrog-greetd-session"
+user = "greetd"
+
+# Auto-login langsung ke Phosh untuk user kouzen saat start-phosh dipanggil
+[initial_session]
+command = "systemd-cat phosh-session"
+user = "kouzen"
