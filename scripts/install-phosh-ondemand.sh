@@ -34,12 +34,12 @@ echo "=== [3/4] Creating 'start-phosh' and 'stop-phosh' Helper Commands ==="
 cat << 'EOF' > /usr/local/bin/start-phosh
 #!/bin/sh
 echo "=== Memulai Antarmuka Grafis Phosh... ==="
-# Matikan fbkeyboard agar input touchscreen dialihkan ke Wayland/Phosh
-echo "276543" | sudo -S systemctl stop fbkeyboard.service 2>/dev/null || sudo systemctl stop fbkeyboard.service
+# Matikan fbkeyboard agar touchscreen dialihkan ke Phosh
+systemctl stop fbkeyboard.service 2>/dev/null || true
 # Jalankan Greetd Display Manager
-echo "276543" | sudo -S systemctl start greetd.service 2>/dev/null || sudo systemctl start greetd.service
+systemctl restart greetd.service 2>/dev/null || true
 # Beralih ke VT7
-echo "276543" | sudo -S chvt 7 2>/dev/null || sudo chvt 7
+chvt 7 2>/dev/null || true
 echo "Phosh GUI telah aktif di layar HP Anda!"
 EOF
 
@@ -51,25 +51,27 @@ ln -sf /usr/local/bin/start-phosh /usr/local/bin/start-posh
 cat << 'EOF' > /usr/local/bin/stop-phosh
 #!/bin/sh
 echo "=== Menghentikan Antarmuka Phosh & Kembali ke Konsol... ==="
-# Hentikan greetd
-echo "276543" | sudo -S systemctl stop greetd.service 2>/dev/null || sudo systemctl stop greetd.service
-# Beralih kembali ke tty1
-echo "276543" | sudo -S chvt 1 2>/dev/null || sudo chvt 1
-# Nyalakan kembali fbkeyboard di tty1
-echo "276543" | sudo -S systemctl restart fbkeyboard.service 2>/dev/null || sudo systemctl restart fbkeyboard.service
-echo "Kembali ke Terminal Konsol (RAM ~600MB dibebaskan bersih)!"
+# 1. Hentikan greetd
+systemctl stop greetd.service 2>/dev/null || true
+# 2. Nyalakan kembali getty login di tty1
+systemctl restart getty@tty1.service 2>/dev/null || true
+# 3. Beralih kembali ke tty1
+chvt 1 2>/dev/null || true
+# 4. Nyalakan kembali fbkeyboard di tty1
+systemctl restart fbkeyboard.service 2>/dev/null || true
+echo "Kembali ke Terminal Konsol tty1 Berhasil!"
 EOF
 
 chmod +x /usr/local/bin/stop-phosh
 ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-gui
 ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-posh
 
-echo "=== [4/4] Verifying fbkeyboard Service ==="
+echo "=== [4/4] Verifying Services ==="
 systemctl restart fbkeyboard.service
 
 echo "=========================================================================="
-echo " Phosh GUI On-Demand BERHASIL DIPASANG!"
+echo " Phosh GUI On-Demand BERHASIL DIKONFIGURASI!"
 echo " - Default Boot: Tetap di Terminal Konsol (Cepat & Hemat Daya)"
 echo " - Untuk masuk GUI  : Ketik 'start-phosh' (atau 'start-gui')"
-echo " - Untuk keluar GUI : Ketik 'stop-phosh' (atau klik Log Out di layar HP)"
+echo " - Untuk keluar GUI : Ketik 'stop-phosh' (atau 'stop-gui')"
 echo "=========================================================================="
