@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build artifacts & packages
+*.img
+*.zip
+*.tar.gz
+*.iso
+pmos-export/
+chroot_*
+.local/
