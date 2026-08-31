@@ -122,7 +122,7 @@ class TubeMobileWindow(Adw.ApplicationWindow):
     def _on_video_selected(self, video_data):
         """Navigate to video player page and load video"""
         self.player_view.load_video(video_data)
-        self.header_bar.set_visible(False) # Hide top bar for player immersion
+        self.header_bar.set_visible(False)
         self.master_stack.set_visible_child_name("player_page")
 
     def _on_back_to_feed(self):
