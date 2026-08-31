@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=TubeMobile
+GenericName=YouTube Mobile Client
+Comment=Pemutar YouTube Native Ringan untuk postmarketOS
+Exec=python3 /usr/local/share/tubemobile/tubemobile/main.py
+Icon=tubemobile
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;GTK;
+StartupNotify=true
+X-Purism-FormFactor=Workstation;Mobile;

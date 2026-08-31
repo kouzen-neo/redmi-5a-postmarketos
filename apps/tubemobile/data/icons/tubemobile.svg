@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="ytGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF0033" />
+      <stop offset="100%" stop-color="#CC0000" />
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  
+  <!-- Outer Rounded Squircle -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#ytGrad)" filter="url(#dropShadow)" />
+  
+  <!-- Gloss highlight -->
+  <path d="M 8 36 C 8 20.5 20.5 8 36 8 L 92 8 C 107.5 8 120 20.5 120 36 C 120 50 8 70 8 36 Z" fill="#ffffff" opacity="0.12" />
+
+  <!-- Centered Play Triangle -->
+  <polygon points="52,42 52,86 88,64" fill="#ffffff" />
+</svg>
