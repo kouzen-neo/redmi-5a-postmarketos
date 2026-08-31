@@ -4,6 +4,7 @@
  * - Cyberpunk Neon Green Matrix Theme (0x00ff00)
  * - Top Row: :  /  <  >  v  ^  -
  * - Bottom Row: 123!@" | Ctrl | Space | . | Alt | Enter
+ * - Precise touch index mapping without collisions
  */
 
 #include <stdlib.h>
@@ -87,7 +88,7 @@ int trowh;
 
 void fill_rect(int x, int y, int w, int h, int color)
 {
-	int i, j, t;
+	int i, j;
 	int32_t *line;
 	if (x < 0) { w += x; x = 0; }
 	if (y < 0) { h += y; y = 0; }
@@ -116,12 +117,6 @@ void fill_rect(int x, int y, int w, int h, int color)
 			}
 			break;
 		case FB_ROTATE_CW:
-			t = x;
-			x = y;
-			y = t;
-			t = w;
-			w = h;
-			h = t;
 			line = (int32_t *) (buf + x * linelength +
 					    (width - y - 1) * 4);
 			for (i = 0; i < h; i++) {
@@ -131,12 +126,6 @@ void fill_rect(int x, int y, int w, int h, int color)
 			}
 			break;
 		case FB_ROTATE_CCW:
-			t = x;
-			x = y;
-			y = t;
-			t = w;
-			w = h;
-			h = t;
 			line = (int32_t *) (buf +
 					    (height * 5 - x - 1) * linelength +
 					    y * 4);
@@ -277,7 +266,7 @@ void draw_keyboard(int row, int pressed)
 	for (key = 0; key < 9; key++) {
 		draw_button(key * width / 10 + width / 20 + 1, height * 2,
 			    width / 10 - 1, height - 1,
-			    (row == 2 && key == pressed) ? TOUCHCOLOR : BUTTONCOLOR,
+			    (row == 1 && (key + 10) == pressed) ? TOUCHCOLOR : BUTTONCOLOR,
 			    layout[layoutuse][key + 10]);
 	}
 	// Row 3 (Shift, z - m, Bcksp)
@@ -287,7 +276,7 @@ void draw_keyboard(int row, int pressed)
 	for (key = 0; key < 7; key++) {
 		draw_button(key * width / 10 + width * 3 / 20 + 1, height * 3,
 			    width / 10 - 1, height - 1,
-			    (row == 3 && key == pressed) ? TOUCHCOLOR : BUTTONCOLOR,
+			    (row == 1 && (key + 19) == pressed) ? TOUCHCOLOR : BUTTONCOLOR,
 			    layout[layoutuse][key + 19]);
 	}
 	draw_textbutton(width * 17 / 20, height * 3,
@@ -304,7 +293,7 @@ void draw_keyboard(int row, int pressed)
 	// Ctrl di kiri (setelah 123!@")
 	draw_textbutton(width * 3 / 20, height * 4,
 			width / 10 - 1, height - 1,
-			(ctrllock) ? TOUCHCOLOR : BUTTONCOLOR,
+			(ctrllock || (row == 4 && 0 == pressed)) ? TOUCHCOLOR : BUTTONCOLOR,
 			"Ctrl");
 	
 	// Spacebar (diperkecil jadi 40% lebar layar)
@@ -320,7 +309,7 @@ void draw_keyboard(int row, int pressed)
 	// Alt di kanan (sebelum Enter)
 	draw_textbutton(width * 15 / 20, height * 4,
 			width / 10 - 1, height - 1,
-			(altlock) ? TOUCHCOLOR : BUTTONCOLOR,
+			(altlock || (row == 4 && 3 == pressed)) ? TOUCHCOLOR : BUTTONCOLOR,
 			"Alt");
 	
 	// Enter di ujung kanan
@@ -360,21 +349,21 @@ void identify_touched_key(int x, int y, int *row, int *pressed)
 			*pressed = x * 7 / 0x10000;
 			break;
 		case 3:
-			*row = 1;		// q - p
+			*row = 1;		// Row 1: q - p (0..9)
 			*pressed = x * 10 / 0x10000;
 			break;
 		case 2:
-			*row = 2;		// a - l
+			*row = 1;		// Row 2: a - l (10..18)
 			if (x > 0x10000 / 20 && x < 0x10000 * 19 / 20)
-				*pressed = (x * 10 - 0x10000 / 2) / 0x10000;
+				*pressed = 10 + (x * 10 - 0x10000 / 2) / 0x10000;
 			break;
 		case 1:
 			if (x < 0x10000 * 3 / 20) {
 				*row = 3;
 				*pressed = 0;	// Left Shift
 			} else if (x < 0x10000 * 17 / 20) {
-				*row = 3;	// z - m
-				*pressed = (x * 10 - 0x10000 * 3 / 2) / 0x10000;
+				*row = 1;	// Row 3 letters: z - m (19..25)
+				*pressed = 19 + (x * 10 - 0x10000 * 3 / 2) / 0x10000;
 			} else {
 				*row = 3;
 				*pressed = 1;	// Bcksp
@@ -415,8 +404,7 @@ void send_key(__u16 code)
 	if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
 		fprintf(stderr, "error: sending uinput event\n");
 	ie.type = EV_SYN;
-	ie.code = 0;
-	ie.value = 0;
+	ie.code = SYN_REPORT;
 	if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
 		fprintf(stderr, "error: sending uinput event\n");
 }
@@ -429,7 +417,7 @@ void send_shifted_key(__u16 code)
 	// Shift down
 	ev.type = EV_KEY; ev.code = KEY_LEFTSHIFT; ev.value = 1;
 	write(fduinput, &ev, sizeof(ev));
-	ev.type = EV_SYN; ev.code = 0; ev.value = 0;
+	ev.type = EV_SYN; ev.code = SYN_REPORT; ev.value = 0;
 	write(fduinput, &ev, sizeof(ev));
 
 	// Key press
@@ -437,13 +425,13 @@ void send_shifted_key(__u16 code)
 	write(fduinput, &ev, sizeof(ev));
 	ev.value = 0;
 	write(fduinput, &ev, sizeof(ev));
-	ev.type = EV_SYN; ev.code = 0; ev.value = 0;
+	ev.type = EV_SYN; ev.code = SYN_REPORT; ev.value = 0;
 	write(fduinput, &ev, sizeof(ev));
 
 	// Shift up
 	ev.type = EV_KEY; ev.code = KEY_LEFTSHIFT; ev.value = 0;
 	write(fduinput, &ev, sizeof(ev));
-	ev.type = EV_SYN; ev.code = 0; ev.value = 0;
+	ev.type = EV_SYN; ev.code = SYN_REPORT; ev.value = 0;
 	write(fduinput, &ev, sizeof(ev));
 }
 
@@ -476,46 +464,44 @@ void send_uinput_event(int row, int pressed)
 			}
 		}
 	} else if (row == 1) {
-		// Normal keys (q - p)
-		send_key(keys[1 + (layoutuse >> 1)][pressed]);
-	} else if (row == 2) {
-		// Normal keys (a - l)
-		send_key(keys[1 + (layoutuse >> 1)][pressed + 10]);
-	} else if (row == 3) {
-		if (pressed == 0) { // Shift
-			layoutuse ^= 1;
-			ie.type = EV_KEY;
-			ie.code = KEY_LEFTSHIFT;
-			ie.value = layoutuse & 1;
-			if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
-				fprintf(stderr, "error sending uinput event\n");
-		} else if (pressed == 1) { // Backspace
-			send_key(KEY_BACKSPACE);
-		} else { // z - m
-			send_key(keys[1 + (layoutuse >> 1)][pressed + 19]);
-		}
-	} else if (row == 4) {
-		if (pressed == 0) { // Left Ctrl
-			ctrllock ^= 1;
-			ie.type = EV_KEY;
-			ie.code = KEY_LEFTCTRL;
-			ie.value = ctrllock;
-			if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
-				fprintf(stderr, "error sending uinput event\n");
-		} else if (pressed == 1) { // Space
-			send_key(KEY_SPACE);
-		} else if (pressed == 2) { // Dot '.'
-			send_key(KEY_DOT);
-		} else if (pressed == 3) { // Right Alt
-			altlock ^= 1;
-			ie.type = EV_KEY;
-			ie.code = KEY_LEFTALT;
-			ie.value = altlock;
-			if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
-				fprintf(stderr, "error sending uinput event\n");
-		} else if (pressed == 4) { // Enter
-			send_key(KEY_ENTER);
-		}
+		// Normal keys (q-p, a-l, z-m) across layout
+		send_key(keys[row + (layoutuse >> 1)][pressed]);
+	} else if (row == 3 && pressed == 0) {
+		// Left Shift
+		layoutuse ^= 1;
+		ie.type = EV_KEY;
+		ie.code = KEY_LEFTSHIFT;
+		ie.value = layoutuse & 1;
+		if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
+			fprintf(stderr, "error sending uinput event\n");
+	} else if (row == 3 && pressed == 1) {
+		// Backspace (100% pure backspace, never touches letters!)
+		send_key(KEY_BACKSPACE);
+	} else if (row == 4 && pressed == 0) {
+		// Left Ctrl (Swapped to left side)
+		ctrllock ^= 1;
+		ie.type = EV_KEY;
+		ie.code = KEY_LEFTCTRL;
+		ie.value = ctrllock;
+		if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
+			fprintf(stderr, "error sending uinput event\n");
+	} else if (row == 4 && pressed == 1) {
+		// Space
+		send_key(KEY_SPACE);
+	} else if (row == 4 && pressed == 2) {
+		// Dot '.' (sebelah kiri Alt)
+		send_key(KEY_DOT);
+	} else if (row == 4 && pressed == 3) {
+		// Right Alt (Swapped to right side)
+		altlock ^= 1;
+		ie.type = EV_KEY;
+		ie.code = KEY_LEFTALT;
+		ie.value = altlock;
+		if (write(fduinput, &ie, sizeof(ie)) != sizeof(ie))
+			fprintf(stderr, "error sending uinput event\n");
+	} else if (row == 4 && pressed == 4) {
+		// Enter
+		send_key(KEY_ENTER);
 	}
 }
 
@@ -572,7 +558,6 @@ int main(int argc, char *argv[])
 	struct input_event iev[64];
 	int rd;
 	int row = -1, pressed = -1;
-	int is_pressed = 0;
 
 	struct sigaction act;
 	act.sa_handler = sig_handler;
@@ -757,14 +742,12 @@ int main(int argc, char *argv[])
 					y = iev[i].value * 0x10000 / theight;
 			} else if (iev[i].type == EV_KEY && iev[i].code == BTN_TOUCH) {
 				if (iev[i].value == 1) {
-					is_pressed = 1;
 					identify_touched_key(x, y, &row, &pressed);
 					fill_rect(0, 0, width - 1, height * 5, TERMCOLOR);
 					draw_keyboard(row, pressed);
 					show_fbkeyboard(fbfd);
 					send_uinput_event(row, pressed);
 				} else if (iev[i].value == 0) {
-					is_pressed = 0;
 					row = -1;
 					pressed = -1;
 					fill_rect(0, 0, width - 1, height * 5, TERMCOLOR);
