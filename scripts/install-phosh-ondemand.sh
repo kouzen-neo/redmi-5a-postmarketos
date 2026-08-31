@@ -26,7 +26,7 @@ EOF
 
 echo "=== [2/4] Configuring Passwordless Sudo for GUI Helpers ==="
 cat << 'EOF' > /etc/sudoers.d/99-phosh-helpers
-kouzen ALL=(ALL) NOPASSWD: /usr/local/bin/start-phosh, /usr/local/bin/stop-phosh, /usr/local/bin/start-gui, /usr/local/bin/stop-gui, /usr/local/bin/start-posh, /usr/local/bin/stop-posh, /usr/bin/systemctl, /usr/bin/chvt
+kouzen ALL=(ALL) NOPASSWD: /usr/local/bin/start-phosh, /usr/local/bin/stop-phosh, /usr/local/bin/start-gui, /usr/local/bin/stop-gui, /usr/local/bin/start-posh, /usr/local/bin/stop-posh, /usr/local/bin/switch-to-console, /usr/local/bin/switch-to-phosh, /usr/bin/systemctl, /usr/bin/chvt, /usr/bin/systemd-run
 EOF
 chmod 0440 /etc/sudoers.d/99-phosh-helpers
 
@@ -34,9 +34,48 @@ echo "=== [3/4] Disabling Auto-Start on Boot (Console Stays Default) ==="
 systemctl disable greetd.service display-manager.service 2>/dev/null || true
 systemctl set-default multi-user.target 2>/dev/null || true
 
-echo "=== [4/4] Creating 'start-phosh' and 'stop-phosh' Helper Commands ==="
+echo "=== [4/4] Creating Decoupled 'start-phosh' and 'stop-phosh' Systemd Switchers ==="
 
-# Script start-phosh / start-gui / start-posh
+# Switcher backend: switch-to-console
+cat << 'EOF' > /usr/local/bin/switch-to-console
+#!/bin/sh
+systemctl stop greetd.service 2>/dev/null || true
+pkill -9 -f phoc 2>/dev/null || true
+pkill -9 -f phosh 2>/dev/null || true
+systemctl restart getty@tty1.service 2>/dev/null || true
+sleep 0.2
+chvt 1 2>/dev/null || true
+echo 0 > /sys/class/graphics/fb0/blank 2>/dev/null || true
+echo 0 > /sys/class/graphics/fbcon/cursor_blink 2>/dev/null || true
+systemctl restart fbkeyboard.service 2>/dev/null || true
+EOF
+chmod +x /usr/local/bin/switch-to-console
+
+# Script stop-phosh (decoupled via systemd-run)
+cat << 'EOF' > /usr/local/bin/stop-phosh
+#!/bin/sh
+if [ "$(id -u)" -ne 0 ]; then
+    exec sudo "$0" "$@"
+fi
+
+echo "=== Menghentikan Phosh & Kembali ke Konsol... ==="
+systemd-run --unit=switch-console --description="Switch from Phosh to Console" /usr/local/bin/switch-to-console
+EOF
+chmod +x /usr/local/bin/stop-phosh
+ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-gui
+ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-posh
+
+# Switcher backend: switch-to-phosh
+cat << 'EOF' > /usr/local/bin/switch-to-phosh
+#!/bin/sh
+systemctl stop fbkeyboard.service 2>/dev/null || true
+systemctl restart greetd.service 2>/dev/null || true
+sleep 0.3
+chvt 7 2>/dev/null || true
+EOF
+chmod +x /usr/local/bin/switch-to-phosh
+
+# Script start-phosh (decoupled via systemd-run)
 cat << 'EOF' > /usr/local/bin/start-phosh
 #!/bin/sh
 if [ "$(id -u)" -ne 0 ]; then
@@ -44,38 +83,15 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 echo "=== Memulai Antarmuka Grafis Phosh... ==="
-systemctl restart greetd.service 2>/dev/null || true
-chvt 7 2>/dev/null || true
-systemctl stop fbkeyboard.service 2>/dev/null || true
-echo "Phosh GUI telah aktif di layar HP Anda!"
+systemd-run --unit=switch-phosh --description="Switch from Console to Phosh" /usr/local/bin/switch-to-phosh
 EOF
-
 chmod +x /usr/local/bin/start-phosh
 ln -sf /usr/local/bin/start-phosh /usr/local/bin/start-gui
 ln -sf /usr/local/bin/start-phosh /usr/local/bin/start-posh
-
-# Script stop-phosh / stop-gui
-cat << 'EOF' > /usr/local/bin/stop-phosh
-#!/bin/sh
-if [ "$(id -u)" -ne 0 ]; then
-    exec sudo "$0" "$@"
-fi
-
-echo "=== Menghentikan Antarmuka Phosh & Kembali ke Konsol... ==="
-systemctl stop greetd.service 2>/dev/null || true
-chvt 1 2>/dev/null || true
-systemctl restart getty@tty1.service 2>/dev/null || true
-systemctl restart fbkeyboard.service 2>/dev/null || true
-echo "Kembali ke Terminal Konsol tty1 Berhasil!"
-EOF
-
-chmod +x /usr/local/bin/stop-phosh
-ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-gui
-ln -sf /usr/local/bin/stop-phosh /usr/local/bin/stop-posh
 
 echo "=========================================================================="
 echo " Phosh GUI On-Demand BERHASIL DIKONFIGURASI!"
 echo " - Default Boot: Tetap di Terminal Konsol (Cepat & Hemat Daya)"
 echo " - Untuk masuk GUI  : Ketik 'start-phosh' (Tanpa perlu password/sudo)"
-echo " - Untuk keluar GUI : Ketik 'stop-phosh' (Tanpa perlu password/sudo)"
+echo " - Untuk keluar GUI : Ketik 'stop-phosh' (Decoupled, 100% anti-stuck)"
 echo "=========================================================================="
