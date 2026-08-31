@@ -89,6 +89,12 @@ void fill_rect(int x, int y, int w, int h, int color)
 {
 	int i, j, t;
 	int32_t *line;
+	if (x < 0) { w += x; x = 0; }
+	if (y < 0) { h += y; y = 0; }
+	if (w <= 0 || h <= 0) return;
+	if (x + w > width) w = width - x;
+	if (y + h > height * 5) h = height * 5 - y;
+
 	switch (rotate) {
 		case FB_ROTATE_UR:
 			line = (int32_t *) (buf + y * linelength + x * 4);
@@ -146,9 +152,15 @@ void fill_rect(int x, int y, int w, int h, int color)
 void draw_glyph(FT_Bitmap *bitmap, int x, int y)
 {
 	int i, j, p, q;
-	int x_max = x + bitmap->width;
-	int y_max = y + bitmap->rows;
+	int x_max;
+	int y_max;
 	int32_t *line;
+
+	if (!bitmap || !bitmap->buffer || bitmap->width <= 0 || bitmap->rows <= 0)
+		return;
+
+	x_max = x + bitmap->width;
+	y_max = y + bitmap->rows;
 
 	for (i = x, p = 0; i < x_max; i++, p++) {
 		for (j = y, q = 0; j < y_max; j++, q++) {
@@ -198,6 +210,10 @@ void draw_glyph(FT_Bitmap *bitmap, int x, int y)
 
 void draw_char(int x, int y, int character)
 {
+	if (character == ' ' || character == 0) {
+		advance = height * 1 / 4;
+		return;
+	}
 	if (FT_Load_Char(face, character, FT_LOAD_RENDER))
 		return;
 	draw_glyph(&face->glyph->bitmap, x + face->glyph->bitmap_left,
@@ -207,6 +223,7 @@ void draw_char(int x, int y, int character)
 
 void draw_text(int x, int y, char *text)
 {
+	if (!text) return;
 	while (*text) {
 		draw_char(x, y, *text);
 		x += advance;
@@ -226,7 +243,9 @@ void draw_key(int x, int y, int w, int h, int color)
 
 void draw_textbutton(int x, int y, int w, int h, int color, char *text)
 {
-	int l = strlen(text);
+	int l;
+	if (!text) return;
+	l = strlen(text);
 	draw_key(x, y, w, h, color);
 	draw_text(x + w / 2 - l * height * 1 / 10, y + height * 2 / 3, text);
 }
